@@ -1,0 +1,6 @@
+.vscode/
+.virtual_documents/
+.bash_history
+.ipynb_checkpoints/
+__pycache__/
+graph_data/
