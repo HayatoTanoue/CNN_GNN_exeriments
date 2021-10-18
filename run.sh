@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # コンテナイメージ
-IMAGE_NAME="cnn-gnn-classifier"
+IMAGE_NAME="cnn-gnn"
 
 docker run --rm -it -v $(pwd):/workspace \
     -e http_proxy=http://proxy.noc.kochi-tech.ac.jp:3128 \
@@ -10,4 +10,3 @@ docker run --rm -it -v $(pwd):/workspace \
     jupyter-lab --no-browser --port=8888 --ip=0.0.0.0 \
     --allow-root --NotebookApp.token=""
 
-	
