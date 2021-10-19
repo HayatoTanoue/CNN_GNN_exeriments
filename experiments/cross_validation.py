@@ -9,7 +9,7 @@ from sklearn.model_selection import KFold
 from torch.utils.data.dataset import Subset
 from torch.utils.data import DataLoader
 
-from models.set_model import CNN_base, GNN_base, model_parameter_counter
+from models.set_model import CNN_base, GNN_base, D1D2_base, model_parameter_counter
 from experiments.cnn_train_utils import cnn_train_val_1epoch
 
 
@@ -34,7 +34,7 @@ def train(
 
     start = time.time()  # 学習時間計測用
     for epoch in range(config.num_epoch):
-        if config.model_name in ["CNN", "BrainNetCNN"]:
+        if config.model_name in ["CNN", "BrainNetCNN", "D1D2"]:
             train_loss, train_acc, val_loss, val_acc = cnn_train_val_1epoch(
                 model, train_loader, valid_loader, device, optimizer, criterion
             )
@@ -59,15 +59,19 @@ def train(
 
         # 10epoch ごとにモデル保存
         if epoch % 10 == 0:
-            torch.save(
-                model.state_dict(),
-                f"{save_dir}/model_weight/fold{fold}_trial{trial}_epoch{epoch}.pth",
-            )
+            if epoch != 0:
+                torch.save(
+                    model.state_dict(),
+                    f"{save_dir}/model_weight/fold{fold}_trial{trial}_epoch{epoch}.pth",
+                )
 
     # save training log
     df.to_csv(f"{save_dir}/train_log/fold{fold}_trial{trial}_log.csv", index=False)
     end = time.time() - start
-    print(f"{fold} cv , trial {trial} : time = {end}, acc = {np.average}")
+
+    print(
+        f"{fold} cv , trial {trial} : time = {round(end,2)}, acc = {round(val_acc, 2)} "
+    )
     return val_acc
 
 
@@ -81,10 +85,14 @@ def CV(num_class, dataset, save_dir, config):
     valid_accs = []
     for fold_idx, (train_idx, valid_idx) in enumerate(fold.split(dataset)):
         # モデルを構築
-        if config.model_name in ["CNN", "BrainNetCNN"]:
-            model = CNN_base(config.model_name, num_class, config.input_size)
-        else:
-            model = GNN_base(config.model_name, 4, 1)
+        if config.model_name in ["D1D2"]:
+            model = D1D2_base(
+                config.classifier, num_class, config.resize, config.out_feature
+            ).to(device)
+        if config.model_name in ["CNN", "BrainCNN"]:
+            model = CNN_base(config.model_name, num_class, config.resize).to(device)
+        if config.model_name in ["GIN", "DGCNN", "Deepsets"]:
+            model = GNN_base(config.model_name, 4, 1).to(device)
 
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(), lr=config.adam_lr)
@@ -116,14 +124,12 @@ def CV(num_class, dataset, save_dir, config):
                 save_dir,
                 config,
             )
-        ave_final_acc = final_acc / 3
+        ave_final_acc = final_acc / config.trial
+        valid_accs.append(ave_final_acc)
 
-    elapsed_time = time.time() - start
-    print(
-        "{} : {} [sec], acc = {}".format(
-            config.name, elapsed_time, np.average(valid_accs)
-        )
-    )
+    elapsed_time = round(time.time() - start, 2)
+    ave_val_acc = round(np.average(valid_accs), 2)
+    print(f"{config.name} : {elapsed_time} [sec], acc = {ave_val_acc}")
 
     total_param = model_parameter_counter(model)
 

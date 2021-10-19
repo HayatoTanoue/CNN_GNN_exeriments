@@ -14,7 +14,6 @@ def cv_train(model, train_loader, device, optimizer, criterion):
 
         optimizer.zero_grad()
         outputs = model(images)
-
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
