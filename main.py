@@ -1,4 +1,4 @@
-from data.data_loader import cnn_data_loader_cv
+from data.data_loader import cnn_data_loader_cv, gnn_data_loader_cv
 from models.set_model import CNN_base
 from experiments.cross_validation import CV
 
@@ -45,7 +45,10 @@ if __name__ == "__main__":
     config = parser.parse_args()
 
     # load dataset
-    dataset, num_class = cnn_data_loader_cv(config.name, config.sort, config.resize)
+    if config.name in ["GIN", "DGCNN", "Deepsets"]:
+        dataset, num_class = gnn_data_loader_cv(config.name)
+    else:
+        dataset, num_class = cnn_data_loader_cv(config.name, config.sort, config.resize)
 
     # make save dir
     save_dir = make_savedir(config)
