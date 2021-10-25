@@ -8,7 +8,7 @@ from models.GNN.DGCNN import DGCNN_Model
 from models.GNN.GIN import GIN
 
 # 1D2D base
-from models.CNN.D1D2Conv import D1D2Conv, D1D2_model
+from models.CNN.D1D2Conv import Deep_D1D2_feature, D1D2_model
 
 import torch
 
@@ -20,13 +20,7 @@ def CNN_base(model_name, num_class, input_size):
     elif model_name == "BrainCNN":
         sample = torch.ones(1, 1, input_size, input_size)
         model = BrainNetCNN(sample, num_class)
-    return model
 
-
-def D1D2_base(classifier, num_classes, input_size, num_feature):
-    """set 2D&1D conv model"""
-    inception = D1D2Conv(num_feature)
-    model = D1D2_model(inception, classifier, num_classes, input_size)
     return model
 
 
@@ -47,6 +41,13 @@ def GNN_base(model_name, num_class, num_node_feature):
         )
     elif model_name == "Deepsets":
         model = DeepMultisets(num_node_feature, num_class)
+    return model
+
+
+def D1D2_base(model_name, input_size, num_class, use_attention):
+    if model_name == "Deep_D1D2":
+        feature = Deep_D1D2_feature(input_size, use_attention)
+        model = D1D2_model(feature, "complex", num_class, input_size)
     return model
 
 

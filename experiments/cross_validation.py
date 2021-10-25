@@ -7,10 +7,12 @@ import torch.optim as optim
 
 from sklearn.model_selection import KFold
 from torch.utils.data.dataset import Subset
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader as DL_torch
+from torch_geometric.loader import DataLoader as DL_geometric
 
 from models.set_model import CNN_base, GNN_base, D1D2_base, model_parameter_counter
 from experiments.cnn_train_utils import cnn_train_val_1epoch
+from experiments.gnn_train_utils import gnn_train_val_1epoch
 
 
 def train(
@@ -39,7 +41,7 @@ def train(
                 model, train_loader, valid_loader, device, optimizer, criterion
             )
         else:
-            train_loss, train_acc, val_loss, val_acc = cnn_train_val_1epoch(
+            train_loss, train_acc, val_loss, val_acc = gnn_train_val_1epoch(
                 model, train_loader, valid_loader, device, optimizer, criterion
             )
 
@@ -75,6 +77,33 @@ def train(
     return val_acc
 
 
+def split_data(dataset, train_idx, valid_idx, config):
+    if config.model_name in ["CNN", "BrainCNN", "Deep_D1D2"]:
+        # split data
+        train_loader = DL_torch(
+            Subset(dataset, train_idx),
+            shuffle=True,
+            batch_size=config.batchsize,
+        )
+        valid_loader = DL_torch(
+            Subset(dataset, valid_idx),
+            shuffle=False,
+            batch_size=config.batchsize,
+        )
+    elif config.model_name in ["GIN", "DGCNN", "Deepsets"]:
+        train_loader = DL_geometric(
+            Subset(dataset, train_idx),
+            shuffle=True,
+            batch_size=config.batchsize,
+        )
+        valid_loader = DL_geometric(
+            Subset(dataset, valid_idx),
+            shuffle=False,
+            batch_size=config.batchsize,
+        )
+    return train_loader, valid_loader
+
+
 def CV(num_class, dataset, save_dir, config):
     start = time.time()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -85,29 +114,20 @@ def CV(num_class, dataset, save_dir, config):
     valid_accs = []
     for fold_idx, (train_idx, valid_idx) in enumerate(fold.split(dataset)):
         # モデルを構築
-        if config.model_name in ["D1D2"]:
+        if config.model_name in ["Deep_D1D2"]:
             model = D1D2_base(
-                config.classifier, num_class, config.resize, config.out_feature
+                config.model_name, config.resize, num_class, config.use_attention
             ).to(device)
         if config.model_name in ["CNN", "BrainCNN"]:
             model = CNN_base(config.model_name, num_class, config.resize).to(device)
         if config.model_name in ["GIN", "DGCNN", "Deepsets"]:
-            model = GNN_base(config.model_name, 4, 1).to(device)
+            model = GNN_base(config.model_name, num_class, 1).to(device)
 
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(), lr=config.adam_lr)
 
-        # split data
-        train_loader = DataLoader(
-            Subset(dataset, train_idx),
-            shuffle=True,
-            batch_size=config.batchsize,
-        )
-        valid_loader = DataLoader(
-            Subset(dataset, valid_idx),
-            shuffle=False,
-            batch_size=config.batchsize,
-        )
+        # split dataset
+        train_loader, valid_loader = split_data(dataset, train_idx, valid_idx, config)
 
         final_acc = 0
         for trial in range(config.trial):

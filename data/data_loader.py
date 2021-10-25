@@ -1,8 +1,10 @@
 import torch
 import networkx as nx
+from torch_geometric.data.data import Data
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from glob import glob
+from tqdm import tqdm
 from torch_geometric.utils import from_networkx
 
 
@@ -38,14 +40,17 @@ def cnn_data_loader_cv(name, sort, resize):
 ########################################################################
 # for gnn loader
 def gnn_data_loader_cv(name):
-    path = f"graph_data/{name}/graph"
-    num_class = len(glob(path) + "/*")
+    path = f"graph_data/{name}/graph_tensor"
     data_list = []
-    for i, file in enumerate(sorted(glob(path))):
-        # adjlist のパスを取得
-        paths = glob(file + "/*.adjlist")
-        data_list += [data_from_adjlist(p, i) for p in paths]
-    return data_list, num_class
+    for i in range(20000):
+        data = Data(
+            x=torch.load(f"{path}/x/{i}.pt"),
+            y=torch.load(f"{path}/y/{i}.pt"),
+            edge_index=torch.load(f"{path}/edge/{i}.pt"),
+        )
+        data_list.append(data)
+
+    return data_list, 4
 
 
 # adjlist -> data (torch geometric)

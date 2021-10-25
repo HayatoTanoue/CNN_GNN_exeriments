@@ -13,11 +13,18 @@ def tuple_type(strings):
 
 
 def make_savedir(config):
-    os.makedirs(
-        f"logs/{config.name}/{config.model_name}/{config.sort}_{config.resize}_{config.adam_lr}",
-        exist_ok=True,
-    )
-    save_dir = f"logs/{config.name}/{config.model_name}/{config.sort}_{config.resize}_{config.adam_lr}"
+    if config.parent_path is None:
+        os.makedirs(
+            f"logs/{config.name}/{config.model_name}/{config.sort}_{config.resize}_{config.adam_lr}",
+            exist_ok=True,
+        )
+        save_dir = f"logs/{config.name}/{config.model_name}/{config.sort}_{config.resize}_{config.adam_lr}"
+    else:
+        os.makedirs(
+            f"{config.parent_path}/logs/{config.name}/{config.model_name}/{config.sort}_{config.resize}_{config.adam_lr}",
+            exist_ok=True,
+        )
+        save_dir = f"{config.parent_path}/logs/{config.name}/{config.model_name}/{config.sort}_{config.resize}_{config.adam_lr}"
 
     os.makedirs(save_dir + "/train_log", exist_ok=True)
     os.makedirs(save_dir + "/model_weight", exist_ok=True)
@@ -27,6 +34,9 @@ def make_savedir(config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    # log
+    parser.add_argument("--parent_path", type=str, default=None)
+
     # data
     parser.add_argument("--resize", type=int, default=100)
     parser.add_argument("--sort", type=str, default="shuffle")
@@ -35,6 +45,8 @@ if __name__ == "__main__":
     parser.add_argument("--classifier", type=str, default="simple")
     parser.add_argument("--out_feature", type=int, default=10)
     parser.add_argument("--model_name", type=str, default="CNN")
+    # for D1D2
+    parser.add_argument("--use_attention", type=bool, default=True)
 
     # train params
     parser.add_argument("--adam_lr", type=float, default=0.01)
@@ -45,7 +57,7 @@ if __name__ == "__main__":
     config = parser.parse_args()
 
     # load dataset
-    if config.name in ["GIN", "DGCNN", "Deepsets"]:
+    if config.model_name in ["GIN", "DGCNN", "Deepsets"]:
         dataset, num_class = gnn_data_loader_cv(config.name)
     else:
         dataset, num_class = cnn_data_loader_cv(config.name, config.sort, config.resize)
