@@ -10,7 +10,14 @@ from torch.utils.data.dataset import Subset
 from torch.utils.data import DataLoader as DL_torch
 from torch_geometric.loader import DataLoader as DL_geometric
 
-from models.set_model import CNN_base, GNN_base, D1D2_base, model_parameter_counter
+from models.set_model import (
+    CNN_base,
+    GNN_base,
+    D1D2_base,
+    Ablation_study,
+    model_parameter_counter,
+    Ablation_shallow_D1D2,
+)
 from experiments.cnn_train_utils import cnn_train_val_1epoch
 from experiments.gnn_train_utils import gnn_train_val_1epoch
 
@@ -36,12 +43,12 @@ def train(
 
     start = time.time()  # 学習時間計測用
     for epoch in range(config.num_epoch):
-        if config.model_name in ["CNN", "BrainNetCNN", "D1D2"]:
-            train_loss, train_acc, val_loss, val_acc = cnn_train_val_1epoch(
+        if config.model_name in ["GIN", "Deepsets", "DGCNN"]:
+            train_loss, train_acc, val_loss, val_acc = gnn_train_val_1epoch(
                 model, train_loader, valid_loader, device, optimizer, criterion
             )
         else:
-            train_loss, train_acc, val_loss, val_acc = gnn_train_val_1epoch(
+            train_loss, train_acc, val_loss, val_acc = cnn_train_val_1epoch(
                 model, train_loader, valid_loader, device, optimizer, criterion
             )
 
@@ -78,7 +85,18 @@ def train(
 
 
 def split_data(dataset, train_idx, valid_idx, config):
-    if config.model_name in ["CNN", "BrainCNN", "Deep_D1D2"]:
+    if config.model_name in ["GIN", "DGCNN", "Deepsets"]:
+        train_loader = DL_geometric(
+            Subset(dataset, train_idx),
+            shuffle=True,
+            batch_size=config.batchsize,
+        )
+        valid_loader = DL_geometric(
+            Subset(dataset, valid_idx),
+            shuffle=False,
+            batch_size=config.batchsize,
+        )
+    else:
         # split data
         train_loader = DL_torch(
             Subset(dataset, train_idx),
@@ -86,17 +104,6 @@ def split_data(dataset, train_idx, valid_idx, config):
             batch_size=config.batchsize,
         )
         valid_loader = DL_torch(
-            Subset(dataset, valid_idx),
-            shuffle=False,
-            batch_size=config.batchsize,
-        )
-    elif config.model_name in ["GIN", "DGCNN", "Deepsets"]:
-        train_loader = DL_geometric(
-            Subset(dataset, train_idx),
-            shuffle=True,
-            batch_size=config.batchsize,
-        )
-        valid_loader = DL_geometric(
             Subset(dataset, valid_idx),
             shuffle=False,
             batch_size=config.batchsize,
@@ -118,10 +125,27 @@ def CV(num_class, dataset, save_dir, config):
             model = D1D2_base(
                 config.model_name, config.resize, num_class, config.use_attention
             ).to(device)
+        if config.model_name in ["Deep_D1D2_noAttention"]:
+            model = D1D2_base(
+                config.model_name, config.resize, num_class, config.use_attention
+            ).to(device)
         if config.model_name in ["CNN", "BrainCNN"]:
             model = CNN_base(config.model_name, num_class, config.resize).to(device)
         if config.model_name in ["GIN", "DGCNN", "Deepsets"]:
             model = GNN_base(config.model_name, num_class, 1).to(device)
+        if config.model_name in ["Deep3", "Deep5", "Deep7", "Only_E2E"]:
+            model = Ablation_study(config.model_name, num_class, config.resize).to(
+                device
+            )
+        if config.model_name in [
+            "layer1_attention_complex",
+            "layer1_attention_simple",
+            "layer2_attention_complex",
+            "layer2_attention_simple",
+        ]:
+            model = Ablation_shallow_D1D2(
+                config.model_name, num_class, config.resize
+            ).to(device)
 
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(), lr=config.adam_lr)

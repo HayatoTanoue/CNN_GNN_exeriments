@@ -21,14 +21,16 @@ def set_transform(resize):
 
 
 # for cnn loader
-def cnn_data_loader_cv(name, sort, resize):
+def cnn_data_loader_cv(name, sort, resize, path=None):
     if name in ["MUTAG", "DD", "COLLAB", "REDDIT-BINARY"]:
         """ベンチマークデータセット"""
-        path = f"graph_data/TUDataset/{name}/{sort}/"
-        num_class = len(glob(f"graph_data/TUDataset/{name}/{sort}/*"))
+        if path is None:
+            path = f"graph_data/TUDataset/{name}/{sort}/"
+        num_class = len(glob(f"{path}/*"))
     else:
         """合成データセット"""
-        path = f"graph_data/{name}/{sort}/pics"
+        if path is None:
+            path = f"graph_data/{name}/{sort}/pics"
         num_class = 4
 
     transforms = set_transform(resize)
@@ -39,10 +41,11 @@ def cnn_data_loader_cv(name, sort, resize):
 
 ########################################################################
 # for gnn loader
-def gnn_data_loader_cv(name):
-    path = f"graph_data/{name}/graph_tensor"
+def gnn_data_loader_cv(name, path=None):
+    if path is None:
+        path = f"graph_data/{name}/graph_tensor"
     data_list = []
-    for i in range(20000):
+    for i in range(len(glob(path + "/edge/*"))):
         data = Data(
             x=torch.load(f"{path}/x/{i}.pt"),
             y=torch.load(f"{path}/y/{i}.pt"),
