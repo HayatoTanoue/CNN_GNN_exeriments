@@ -8,10 +8,14 @@ logs/
 log1/
 
 notebooks/before_robustness_data/
+notebooks/before2_robustness/
 notebooks/robustness_data_graph/
 notebooks/robustness_data_img/
 notebooks/robustness_data_tensor/
 notebooks/robustness_plot/
+notebooks/text_plot/
+notebooks/GNN_model_save/
+
 
 .Trash-0/
 streamlit/
